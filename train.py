@@ -8,6 +8,7 @@
 
 import os
 import json
+import time
 from typing import NamedTuple
 from tqdm import tqdm
 
@@ -25,6 +26,10 @@ class Config(NamedTuple):
     warmup: float = 0.1
     save_steps: int = 100 # interval for saving model
     total_steps: int = 100000 # total number of steps to train
+    mixed: bool = False
+    prof: bool = False
+    prof_start: int = 2
+    prof_stop: int = 22
 
     @classmethod
     def from_json(cls, file): # load config from json file
@@ -56,14 +61,37 @@ class Trainer(object):
             for i, batch in enumerate(iter_bar):
                 batch = [t.to(self.device) for t in batch]
 
-                self.optimizer.zero_grad()
-                loss = get_loss(model, batch, global_step).mean() # mean() for Data Parallelism
-                loss.backward()
-                self.optimizer.step()
+                with torch.cuda.amp.autocast(enabled=self.cfg.mixed):
+                    self.optimizer.zero_grad()
+                    loss = get_loss(model, batch, global_step).mean() # mean() for Data Parallelism
+                    loss.backward()
+                    self.optimizer.step()
 
                 global_step += 1
                 loss_sum += loss.item()
                 iter_bar.set_description('Iter (loss=%5.3f)'%loss.item())
+                
+                if self.cfg.prof and global_step == self.cfg.prof_start:
+                    start_time = time.time()
+                    
+                if self.cfg.prof and global_step == self.cfg.prof_stop:
+                    total_time = time.time() - start_time
+                    mcfg = self.model.cfg
+                    tcfg = self.cfg
+                    
+                    stats = (f"torch\t{tcfg.mixed}\t{mcfg.vocab_size}\t{mcfg.max_len}\t{mcfg.n_layers}\t"
+                             f"{mcfg.hidden}\t{mcfg.hidden_ff}\t{tcfg.batch_size}\t"
+                             f"{torch.cuda.memory_stats()['allocated_bytes.all.peak']/1024**2:.3f}\t"
+                             f"{(self.cfg.prof_stop-self.cfg.prof_start)/total_time:.3f}"
+                    )
+                    #print(torch.cuda.memory_summary())
+                    print()
+                    print(stats)
+                    with open("bench.tsv", "a") as f:
+                        f.write(stats+"\n")
+                    
+                    self.save(global_step)
+                    return
 
                 if global_step % self.cfg.save_steps == 0: # save
                     self.save(global_step)

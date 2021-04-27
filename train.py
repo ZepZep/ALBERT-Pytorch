@@ -50,9 +50,10 @@ class Trainer(object):
         """ Train Loop """
         self.model.train() # train mode
         self.load(model_file)
-        model = self.model.to(self.device)
+        model = self.model
         if data_parallel: # use Data Parallelism with Multi-GPU
             model = nn.DataParallel(model)
+        model = model.to(self.device)
 
         global_step = 0 # global iteration steps regardless of epochs
         for e in range(self.cfg.n_epochs):
@@ -109,9 +110,10 @@ class Trainer(object):
         """ Evaluation Loop """
         self.model.eval() # evaluation mode
         self.load(model_file)
-        model = self.model.to(self.device)
+        model = self.model
         if data_parallel: # use Data Parallelism with Multi-GPU
             model = nn.DataParallel(model)
+        model = model.to(self.device)
 
         results = [] # prediction results
         iter_bar = tqdm(self.data_iter, desc='Iter (loss=X.XXX)')

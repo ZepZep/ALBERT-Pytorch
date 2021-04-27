@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=1 CUDA_LAUNCH_BLOCKING=1 python pretrain.py \
+CUDA_VISIBLE_DEVICES=0 python3 pretrain.py \
             --data_file './data/tta.txt' \
             --vocab './data/tta.vocab' \
             --train_cfg './config/pretrain.json' \

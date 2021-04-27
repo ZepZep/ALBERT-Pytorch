@@ -1,13 +1,13 @@
 {
     "seed": 3431,
-    "batch_size": 48,
+    "batch_size": 16,
     "lr": 1e-5,
     "n_epochs": 25,
     "warmup": 0.01,
     "save_steps": 2000,
     "total_steps": 100000,
     "mixed": true,
-    "prof": false,
-    "prof_start": 2,
-    "prof_stop": 22
+    "prof": true,
+    "prof_start": 5,
+    "prof_stop": 25
 }
